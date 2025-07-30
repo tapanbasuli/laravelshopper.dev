@@ -88,7 +88,7 @@ Please see [contributing.md](CONTRIBUTING.md) for details and a todolist.
 
 ## Security
 
-If you discover any security related issues, please email arthur@shopperlabs.io instead of using the issue tracker.
+If you discover any security related issues, please email contact@shopperlabs.co instead of using the issue tracker.
 
 ## Credits
 
