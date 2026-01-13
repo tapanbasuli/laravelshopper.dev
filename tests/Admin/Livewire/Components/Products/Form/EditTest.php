@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
-use Shopper\Core\Events\Products\Updated;
-use Shopper\Core\Models\Product;
-use Shopper\Core\Models\User;
+use Shopper\Core\Events\Products\ProductUpdated;
 use Shopper\Livewire\Components\Products\Form\Edit;
+use Tests\Core\Stubs\Product;
+use Tests\Core\Stubs\User;
 
 uses(Tests\TestCase::class);
 
 beforeEach(function (): void {
+    config()->set('shopper.models.product', Product::class);
+
     $this->user = User::factory()->create();
     $this->user->givePermissionTo('edit_products');
     $this->actingAs($this->user);
@@ -32,7 +34,7 @@ describe(Edit::class, function (): void {
 
         $product->refresh();
 
-        Event::assertDispatched(Updated::class);
+        Event::assertDispatched(ProductUpdated::class);
 
         expect($product->slug)->toBe('demo-product');
     });
@@ -58,7 +60,7 @@ describe(Edit::class, function (): void {
 
         $product->refresh();
 
-        Event::assertDispatched(Updated::class);
+        Event::assertDispatched(ProductUpdated::class);
 
         expect($product->external_id)->toBe($uuid);
     });

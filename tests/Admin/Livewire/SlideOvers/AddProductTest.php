@@ -5,18 +5,20 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Shopper\Core\Enum\ProductType;
-use Shopper\Core\Events\Products\Created;
+use Shopper\Core\Events\Products\ProductCreated;
 use Shopper\Core\Models\Brand;
 use Shopper\Core\Models\Category;
 use Shopper\Core\Models\Channel;
 use Shopper\Core\Models\Inventory;
-use Shopper\Core\Models\Product;
-use Shopper\Core\Models\User;
 use Shopper\Livewire\SlideOvers\AddProduct;
+use Tests\Core\Stubs\Product;
+use Tests\Core\Stubs\User;
 
 uses(Tests\TestCase::class);
 
 beforeEach(function (): void {
+    config()->set('shopper.models.product', Product::class);
+
     $this->user = User::factory()->create();
     $this->user->givePermissionTo('add_products');
     $this->actingAs($this->user);
@@ -37,7 +39,7 @@ describe(AddProduct::class, function (): void {
             ->call('store')
             ->assertHasNoFormErrors();
 
-        Event::assertDispatched(Created::class);
+        Event::assertDispatched(ProductCreated::class);
 
         expect(Product::query()->count())->toBe(1);
     });
@@ -63,7 +65,7 @@ describe(AddProduct::class, function (): void {
 
         $product = Product::query()->first();
 
-        Event::assertDispatched(Created::class);
+        Event::assertDispatched(ProductCreated::class);
 
         expect(Product::query()->count())
             ->toBe(1)
@@ -90,7 +92,7 @@ describe(AddProduct::class, function (): void {
             ->call('store')
             ->assertHasNoFormErrors();
 
-        Event::assertDispatched(Created::class);
+        Event::assertDispatched(ProductCreated::class);
 
         $product = Product::query()->first();
 
