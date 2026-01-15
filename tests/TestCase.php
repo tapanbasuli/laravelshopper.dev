@@ -21,18 +21,18 @@ use Milon\Barcode\BarcodeServiceProvider;
 use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use PDO;
+use PDOException;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
 use Shopper\Core\CoreServiceProvider;
 use Shopper\Core\Database\Seeders\ShopperSeeder;
-use Shopper\Core\Models\Currency;
-use Shopper\Core\Models\Setting;
-use Tests\Core\Stubs\User;
 use Shopper\ShopperServiceProvider;
 use Shopper\Sidebar\SidebarServiceProvider;
 use Spatie\LivewireWizard\WizardServiceProvider;
 use Spatie\MediaLibrary\MediaLibraryServiceProvider;
+use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\PermissionServiceProvider;
 use TailwindMerge\Laravel\TailwindMergeServiceProvider;
+use Tests\Core\Stubs\User;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -47,7 +47,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        $this->loadLaravelMigrations();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // Freeze time to avoid timestamp errors
         $this->freezeTime();
@@ -101,6 +101,11 @@ abstract class TestCase extends BaseTestCase
             __DIR__.'/../packages/admin/resources/views',
         ]);
 
+        // Paratest sets TEST_TOKEN for each worker (0, 1, 2, etc.)
+        $testToken = env('TEST_TOKEN', '');
+        $dbSuffix = $testToken !== '' ? "_{$testToken}" : '';
+        $dbName = env('DB_DATABASE', 'testing').$dbSuffix;
+
         $app['config']->set('database.connections.sqlite', [
             'driver' => 'sqlite',
             'database' => env('DB_DATABASE', ':memory:'),
@@ -112,7 +117,7 @@ abstract class TestCase extends BaseTestCase
             'driver' => 'mysql',
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('MYSQL_PORT', env('DB_PORT', '3306')),
-            'database' => env('DB_DATABASE', 'testing'),
+            'database' => $dbName,
             'username' => env('MYSQL_USERNAME', env('DB_USERNAME', 'root')),
             'password' => env('MYSQL_PASSWORD', env('DB_PASSWORD', '')),
             'charset' => 'utf8mb4',
@@ -131,7 +136,7 @@ abstract class TestCase extends BaseTestCase
             'driver' => 'pgsql',
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('PGSQL_PORT', env('DB_PORT', '5432')),
-            'database' => env('DB_DATABASE', 'testing'),
+            'database' => $dbName,
             'username' => env('PGSQL_USERNAME', env('DB_USERNAME', 'postgres')),
             'password' => env('PGSQL_PASSWORD', env('DB_PASSWORD', '')),
             'charset' => 'utf8',
@@ -144,7 +149,43 @@ abstract class TestCase extends BaseTestCase
             ],
         ]);
 
-        $app['config']->set('database.default', env('DB_CONNECTION', 'testing'));
+        $connection = env('DB_CONNECTION', 'testing');
+
+        // Auto-create test databases for MySQL/PostgreSQL parallel workers
+        if ($dbSuffix !== '' && in_array($connection, ['mysql', 'pgsql'])) {
+            $this->ensureDatabaseExists($connection, $dbName, $app['config']->get("database.connections.{$connection}"));
+        }
+
+        $app['config']->set('database.default', $connection);
         $app['config']->set('database.connections.testing', $app['config']->get('database.connections.sqlite'));
+    }
+
+    protected function ensureDatabaseExists(string $driver, string $dbName, array $config): void
+    {
+        try {
+            if ($driver === 'mysql') {
+                $pdo = new PDO(
+                    "mysql:host={$config['host']};port={$config['port']}",
+                    $config['username'],
+                    $config['password'],
+                    $config['options']
+                );
+                $pdo->exec("create database if not exists `{$dbName}` character set {$config['charset']} collate {$config['collation']}");
+            } elseif ($driver === 'pgsql') {
+                $pdo = new PDO(
+                    "pgsql:host={$config['host']};port={$config['port']};dbname=postgres",
+                    $config['username'],
+                    $config['password'],
+                    $config['options']
+                );
+                $result = $pdo->query("select 1 from pg_database where datname = '{$dbName}'");
+
+                if ($result->fetchColumn() === false) {
+                    $pdo->exec("create database \"{$dbName}\"");
+                }
+            }
+        } catch (PDOException) {
+            // Database might already exist or connection failed - let it fail later with a clearer error
+        }
     }
 }
