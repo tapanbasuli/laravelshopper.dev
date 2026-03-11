@@ -31,6 +31,7 @@ use Shopper\Core\Models\Currency;
 use Shopper\Core\Models\PaymentMethod;
 use Shopper\Core\Models\Zone;
 use Shopper\Livewire\Components\SlideOverComponent;
+use Shopper\Traits\HandlesAuthorizationExceptions;
 use Shopper\Traits\InteractsWithSlideOverForm;
 
 /**
@@ -38,6 +39,7 @@ use Shopper\Traits\InteractsWithSlideOverForm;
  */
 class ZoneForm extends SlideOverComponent implements HasActions, HasForms, SlideOverForm
 {
+    use HandlesAuthorizationExceptions;
     use InteractsWithActions;
     use InteractsWithForms;
     use InteractsWithSlideOverForm;

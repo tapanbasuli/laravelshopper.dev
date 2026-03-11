@@ -20,6 +20,7 @@ use Shopper\Core\Models\Country;
 use Shopper\Core\Models\TaxProvider;
 use Shopper\Core\Models\TaxZone;
 use Shopper\Livewire\Components\SlideOverComponent;
+use Shopper\Traits\HandlesAuthorizationExceptions;
 use Shopper\Traits\InteractsWithSlideOverForm;
 
 /**
@@ -27,6 +28,7 @@ use Shopper\Traits\InteractsWithSlideOverForm;
  */
 class TaxZoneForm extends SlideOverComponent implements HasActions, HasForms, SlideOverForm
 {
+    use HandlesAuthorizationExceptions;
     use InteractsWithActions;
     use InteractsWithForms;
     use InteractsWithSlideOverForm;
